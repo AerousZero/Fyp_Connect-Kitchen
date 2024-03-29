@@ -109,10 +109,10 @@ WSGI_APPLICATION = 'connect_kitchen_be.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'beapi',
+        'NAME': 'konnect_db',
         'USER': 'root',
-        'PASSWORD': 'aAshish11@',
-        'HOST': 'localhost',
+        'PASSWORD': 'srijan',
+        'HOST': '127.0.0.1',
         'PORT': '3306',
     }
 }
