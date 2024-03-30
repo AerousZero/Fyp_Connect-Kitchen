@@ -18,10 +18,10 @@ export const login = async ({username, password}) => {
     throw error;
   }
 };
-export const register = async (data) => {
+export const signUp = async (data) => {
   try {
-    const response = await axios.post(getApiUrl("/register"), data);
-    return response.data; // Assuming data is in response
+    const response = await axios.post('http://127.0.0.1:8000/api/register/', data);
+    return response; 
   } catch (error) {
     throw error; // Re-throw error for handling at calling location
   }
