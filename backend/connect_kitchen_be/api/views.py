@@ -11,6 +11,7 @@ from django.db.utils import Error as DBError
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth.hashers import make_password
+from rest_framework.exceptions import NotFound, ValidationError
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -18,7 +19,15 @@ def register_view(request):
     if request.method == 'POST':
         role_name = request.data.get('role')
         if not role_name:
-            return Response({'error': 'Role name is required'}, status=status.HTTP_400_BAD_REQUEST)
+            raise NotFound('Role name is required')
+
+        email = request.data.get('email')
+        if not email:
+           raise ValidationError({"status":status.HTTP_400_BAD_REQUEST,"message": 'Email is required'})
+
+        # Check if email already exists
+        if User.objects.filter(email=email).exists():
+          raise ValidationError({"status":status.HTTP_400_BAD_REQUEST, "message":'Email already exists'})
 
         role, created = Role.objects.get_or_create(name=role_name)
         user_data = request.data.copy()
