@@ -22,12 +22,9 @@ class FreelanceChef(models.Model):
     location = models.CharField(max_length=100, blank=True, null=True)
     experience = models.IntegerField(blank=True, null=True)
     availability = models.BooleanField(default=False)
-    rate = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    schedule = models.CharField(max_length=255, blank=True, null=True)
-    contact_info = models.CharField(max_length=255, blank=True, null=True)
+    hourlyRate = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     skills = models.ManyToManyField(Skill, related_name='freelance_chefs', blank=True)
-    specialties = models.ManyToManyField(Specialty, related_name='freelance_chefs', blank=True)
-
+    
 class Review(models.Model):
     chef = models.ForeignKey(FreelanceChef, on_delete=models.CASCADE)
     review_text = models.TextField()
