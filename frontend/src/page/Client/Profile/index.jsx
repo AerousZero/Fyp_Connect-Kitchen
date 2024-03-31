@@ -9,7 +9,7 @@ function ClientProfile() {
   return (
     <div>
        <ClientLayout>
-        <Profile user={userDetails} />
+        <Profile user={userDetails.user} />
        </ClientLayout>
         
       
