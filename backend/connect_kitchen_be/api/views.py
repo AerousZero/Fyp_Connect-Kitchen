@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Role, User
+from .models import Role, User, FreelanceChef
 from .serializers import UserSerializer, ProfileSerializer
 from .utils import decode_token
 from django.db import connection
@@ -76,17 +76,53 @@ def profile_view(request):
     try:
         user_id = decode_token(authorization_header)
         user = User.objects.get(id=user_id)
+        
         if request.method == 'GET':
             serializer = ProfileSerializer(user)
             return Response(serializer.data)
+        
         elif request.method in ['PUT', 'PATCH']:
             serializer = ProfileSerializer(user, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data)
+                
+                # Check if FreelanceChef instance exists, if not, create one
+                try:
+                    freelance_chef = FreelanceChef.objects.get(user=user)
+                except FreelanceChef.DoesNotExist:
+                    # Assuming you have the necessary data available to create a FreelanceChef instance
+                    location = request.data.get('location', '')
+                    experience = request.data.get('experience', 0)
+                    availability = request.data.get('availability', false)
+                    hourlyRate = request.data.get('hourlyRate', 0.0)
+                    skills = request.data.get('skills', [])
+                    
+                    # Create FreelanceChef instance
+                    freelance_chef = FreelanceChef.objects.create(
+                        user=user,
+                        location=location,
+                        experience=experience,
+                        availability=availability,
+                        hourlyRate= hourlyRate
+                    )
+                    freelance_chef.skills.add(*skills)
+                    
+                else:
+                    # Update existing FreelanceChef instance with new data
+                    freelance_chef.location = request.data.get('location', freelance_chef.location)
+                    freelance_chef.experience = request.data.get('experience', freelance_chef.experience)
+                    freelance_chef.availability = request.data.get('availability', freelance_chef.availability)
+                    freelance_chef.hourlyRate = request.data.get('hourlyRate', freelance_chef.hourlyRate)
+                    freelance_chef.skills.clear()  # Clear existing skills
+                    freelance_chef.skills.add(*request.data.get('skills', []))  # Add new skills
+                    freelance_chef.save()
+
+                return Response({'message': 'Profile updated successfully'}, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
         else:
             return Response({'error': 'Method not allowed'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
     except TokenError as e:
         raise AuthenticationFailed(str(e))
