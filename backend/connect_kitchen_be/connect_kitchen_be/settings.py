@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
     'rest_framework',
@@ -80,8 +81,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True
-
+CORS_ALLOWED_ORIGINS = [
+   "http://localhost:5173"
+]
 
 ROOT_URLCONF = 'connect_kitchen_be.urls'
 
@@ -103,6 +105,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'connect_kitchen_be.wsgi.application'
 
+ASGI_APPLICATION = "connect_kitchen_be.asgi.application"
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': "channels.layers.InMemoryChannelLayer"
+        }
+    }
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

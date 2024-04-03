@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Role, User, Skill, Specialty, FreelanceChef, Review, SavedJob
+from .models import Role, User, Skill, Specialty, FreelanceChef, Review, SavedJob, JobProposal, Message
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,6 +35,17 @@ class SavedJobSerializer(serializers.ModelSerializer):
     class Meta:
         model = SavedJob
         fields = [ 'job']
+
+class ProposalSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = JobProposal
+        fields = '__all__'
+
+class MessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        fields = ['id', 'sender', 'recipient', 'message', 'job', 'timestamp', 'read_at', 'is_read']
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:

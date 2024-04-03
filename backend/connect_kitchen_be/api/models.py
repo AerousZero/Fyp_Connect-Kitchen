@@ -54,6 +54,32 @@ class SavedJob(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_jobs')
 
+class ProposalType(Enum):
+    HOURLY = 'Hourly'
+    FIXED = 'Fixed'
+
+class JobProposal(models.Model):
+    job = models.ForeignKey('Job', on_delete=models.CASCADE)
+    user = models.ForeignKey('User', on_delete=models.CASCADE)
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    cover_letter = models.TextField()
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_shortlisted = models.BooleanField(default=False)
+    is_hired = models.BooleanField(default=False)
+    is_completed = models.BooleanField(default=False)
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
+    message = models.TextField()
+    job = models.ForeignKey(Job, related_name='job_messages', on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+   
+
 #If Advertisement is implemented
 class Hospitality(models.Model):
     title = models.CharField( max_length=50)
