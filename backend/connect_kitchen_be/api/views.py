@@ -228,3 +228,46 @@ def get_saved_jobs_view(request):
             saved_job_data.append(saved_job_dict)
 
         return Response({'status': status.HTTP_200_OK, 'message': 'Saved jobs fetched successfully', 'data': saved_job_data}, status=status.HTTP_200_OK)
+
+
+#remove post from favourite list
+@api_view(['DELETE'])
+def delete_saved_job_view(request, saved_job_id):
+    try:
+        saved_job = SavedJob.objects.get(id=saved_job_id, user=request.user)
+        saved_job.delete()
+        return Response({'status': status.HTTP_204_NO_CONTENT, 'message': 'Job deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except SavedJob.DoesNotExist:
+        return Response({'status': status.HTTP_404_NOT_FOUND, 'message': 'Saved job not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+
+    
+
+@api_view(['GET', 'OPTIONS'])
+def get_job_by_id(request, job_id):
+    try:
+        job = Job.objects.get(id=job_id)
+        job_data = get_job_data(job, request)
+        return Response({'status': status.HTTP_200_OK, 'message': 'Job fetched successfully', 'data': job_data}, status=status.HTTP_200_OK)
+    
+    except Job.DoesNotExist:
+        return Response({'status': status.HTTP_404_NOT_FOUND, 'message': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+
+def get_job_data(job, request):
+    job_data = {}
+    job_serializer = JobSerializer(job)
+    job_data['job'] = job_serializer.data
+    
+    # Fetch user for the job
+    job_data['user'] = get_user_data(job.posted_by)
+    
+    # Fetch related skills for the job
+    job_data['skills'] = get_skills_data(job)
+
+    
+    
+    # Check if the job is a favorite for the user
+    job_data['isFavorite'] = check_if_favorite(job, request)
+    
+    return job_data
+
