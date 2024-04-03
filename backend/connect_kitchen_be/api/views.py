@@ -165,7 +165,7 @@ def get_jobs(request):
             'data': job_data
         }, status=status.HTTP_200_OK)
     
-    
+
 # Add job to save/favourite section by chef
 @api_view(['POST'])
 def save_job_view(request):
@@ -186,3 +186,45 @@ def save_job_view(request):
             serializer.save(user=user)
             return Response({'status': status.HTTP_201_CREATED, 'message': 'Job saved successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# Fetch Saved Post from list
+@api_view(['GET'])
+def get_saved_jobs_view(request):
+    # Check authorization
+    authorization_header = request.headers.get('Authorization')
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+    
+    if request.method == 'GET':
+        saved_jobs = SavedJob.objects.filter(user=user)
+        if not saved_jobs:
+            return Response({'status': status.HTTP_200_OK, 'message': 'No saved jobs found', 'data': []}, status=status.HTTP_200_OK)
+        
+        saved_job_data = []
+        for saved_job in saved_jobs:
+            saved_job_dict = {}
+            # saved_job_dict['saved_job'] = SavedJobSerializer(saved_job).data
+            
+            # Fetch job details for the saved job
+            job_serializer = JobSerializer(saved_job.job)
+            saved_job_dict['job'] = job_serializer.data
+            
+            # Fetch user details for the job
+            user_serializer = UserSerializer(saved_job.job.posted_by)
+            saved_job_dict['user'] = user_serializer.data
+            
+            # Fetch related skills for the job
+            skill_serializer = SkillSerializer(saved_job.job.required_skills.all(), many=True)
+            saved_job_dict['skills'] = skill_serializer.data
+
+            # Check if the job is a favorite for the user
+            is_favorite = SavedJob.objects.filter(user=user, job=saved_job.job).exists()
+            saved_job_dict['isFavorite'] = is_favorite
+            
+            saved_job_data.append(saved_job_dict)
+
+        return Response({'status': status.HTTP_200_OK, 'message': 'Saved jobs fetched successfully', 'data': saved_job_data}, status=status.HTTP_200_OK)
