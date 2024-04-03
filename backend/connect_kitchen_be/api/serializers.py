@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Role, User, Skill, Specialty, FreelanceChef, Review, SavedJob, JobProposal, Message
+from .models import Role, User, Skill, Specialty, FreelanceChef, Review, Job, SavedJob,JobProposal, Message, ReviewRating
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,24 +29,6 @@ class FreelanceChefSerializer(serializers.ModelSerializer):
         model = FreelanceChef
         fields = '__all__'
 
-class SavedJobSerializer(serializers.ModelSerializer):
-   
-
-    class Meta:
-        model = SavedJob
-        fields = [ 'job']
-
-class ProposalSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = JobProposal
-        fields = '__all__'
-
-class MessageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Message
-        fields = ['id', 'sender', 'recipient', 'message', 'job', 'timestamp', 'read_at', 'is_read']
-
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
@@ -66,3 +48,77 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         exclude = ['password']
+
+
+class JobSerializer(serializers.ModelSerializer):
+    payment_type = serializers.SerializerMethodField()
+    experience_level = serializers.SerializerMethodField()
+    is_shortlisted = serializers.SerializerMethodField()
+    is_hired = serializers.SerializerMethodField()
+    user_is_hired = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Job
+        fields = '__all__'
+
+    def get_payment_type(self, obj):
+        if obj.fixed_budget is not None:
+            return 'Fixed Price'
+        elif obj.hourly_rate is not None:
+            return 'Hourly Rate'
+        else:
+            return None
+
+    def get_experience_level(self, obj):
+        if obj.required_experience < 1:
+            return 'Junior'
+        elif 1 <= obj.required_experience < 2:
+            return 'MidLevel'
+        else:
+            return 'Senior'
+
+    def get_is_shortlisted(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            user = request.user
+            return obj.proposals.filter(user=user, is_shortlisted=True).exists()
+        return False
+
+    def get_is_hired(self, obj):
+       return JobProposal.objects.filter(job=obj, is_hired=True).exists()
+
+
+    def get_user_is_hired(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            user = request.user
+            job = obj
+            return job.objects.filter(user=user, job=job, is_hired=True).exists()
+        return False
+
+
+
+class SavedJobSerializer(serializers.ModelSerializer):
+   
+
+    class Meta:
+        model = SavedJob
+        fields = [ 'job']
+
+class ProposalSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = JobProposal
+        fields = '__all__'
+
+class MessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Message
+        fields = ['id', 'sender', 'recipient', 'message', 'job', 'timestamp', 'read_at', 'is_read']
+
+class ReviewRatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReviewRating
+        fields = ['id', 'review', 'rating', 'user', 'createdBy']
+        
+       
