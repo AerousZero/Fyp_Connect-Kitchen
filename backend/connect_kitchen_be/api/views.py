@@ -3,8 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Role, User, FreelanceChef, Skill, Job
-from .serializers import UserSerializer, ProfileSerializer, JobSerializer
+from .models import Role, User, FreelanceChef, Skill, Job, SavedJob, JobProposal
+from .serializers import UserSerializer, ProfileSerializer, JobSerializer, SkillSerializer, SavedJobSerializer, ProposalSerializer
 from .utils import decode_token
 from django.db import connection
 from django.db.utils import Error as DBError
@@ -12,6 +12,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth.hashers import make_password
 from rest_framework.exceptions import NotFound, ValidationError, NotAuthenticated
+
 
 
 @api_view(['POST'])
@@ -117,7 +118,9 @@ def profile_view(request):
     
     except TokenError as e:
         raise AuthenticationFailed(str(e))
+    
 
+# Job Posting
 @api_view(['GET'])
 def get_jobs(request):
     # Check authorization
@@ -161,3 +164,25 @@ def get_jobs(request):
             'message': 'Jobs fetched successfully', 
             'data': job_data
         }, status=status.HTTP_200_OK)
+    
+    
+# Add job to save/favourite section by chef
+@api_view(['POST'])
+def save_job_view(request):
+    # Check authorization
+    authorization_header = request.headers.get('Authorization')
+    if not authorization_header:
+        return Response({'status': '401', 'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        return Response({'status': '401', 'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    if request.method == 'POST':
+        serializer = SavedJobSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=user)
+            return Response({'status': status.HTTP_201_CREATED, 'message': 'Job saved successfully'}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
