@@ -90,3 +90,9 @@ class Review(models.Model):
     chef = models.ForeignKey(FreelanceChef, on_delete=models.CASCADE)
     review_text = models.TextField()
     rating = models.FloatField()
+
+class ReviewRating(models.Model):
+    review = models.ForeignKey(Review, on_delete=models.CASCADE)
+    rating = models.CharField(max_length=100)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='review_ratings')
+    createdBy = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_review_ratings')
