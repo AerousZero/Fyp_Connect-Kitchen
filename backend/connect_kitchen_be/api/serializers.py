@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Role, User, Skill, Specialty, FreelanceChef, Review
+from .models import Role, User, Skill, Specialty, FreelanceChef, Review, SavedJob
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,6 +28,13 @@ class FreelanceChefSerializer(serializers.ModelSerializer):
     class Meta:
         model = FreelanceChef
         fields = '__all__'
+
+class SavedJobSerializer(serializers.ModelSerializer):
+   
+
+    class Meta:
+        model = SavedJob
+        fields = [ 'job']
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:

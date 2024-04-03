@@ -49,7 +49,10 @@ class Job(models.Model):
     required_skills = models.ManyToManyField(Skill)
     required_experience = models.IntegerField(default=0)
 
-
+#Save JOB post
+class SavedJob(models.Model):
+    job = models.ForeignKey(Job, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_jobs')
 
 #If Advertisement is implemented
 class Hospitality(models.Model):
