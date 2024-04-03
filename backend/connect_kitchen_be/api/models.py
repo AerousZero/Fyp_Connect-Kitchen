@@ -30,11 +30,6 @@ class FreelanceChef(models.Model):
     hourlyRate = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     skills = models.ManyToManyField(Skill, related_name='freelance_chefs', blank=True)
     
-class Review(models.Model):
-    chef = models.ForeignKey(FreelanceChef, on_delete=models.CASCADE)
-    review_text = models.TextField()
-    rating = models.FloatField()
-
 
 class Job(models.Model):
     title = models.CharField(max_length=255)
@@ -90,3 +85,8 @@ class Advert(models.Model):
     name = models.CharField( max_length=50)
     price = models.IntegerField()
     image = models.ImageField(upload_to='image/advert', null=True)
+
+class Review(models.Model):
+    chef = models.ForeignKey(FreelanceChef, on_delete=models.CASCADE)
+    review_text = models.TextField()
+    rating = models.FloatField()
