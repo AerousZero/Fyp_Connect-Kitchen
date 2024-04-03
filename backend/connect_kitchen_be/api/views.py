@@ -3,15 +3,16 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Role, User, FreelanceChef
-from .serializers import UserSerializer, ProfileSerializer
+from .models import Role, User, FreelanceChef, Skill, Job
+from .serializers import UserSerializer, ProfileSerializer, JobSerializer
 from .utils import decode_token
 from django.db import connection
 from django.db.utils import Error as DBError
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth.hashers import make_password
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import NotFound, ValidationError, NotAuthenticated
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -90,33 +91,23 @@ def profile_view(request):
                 try:
                     freelance_chef = FreelanceChef.objects.get(user=user)
                 except FreelanceChef.DoesNotExist:
-                    # Assuming you have the necessary data available to create a FreelanceChef instance
-                    location = request.data.get('location', '')
-                    experience = request.data.get('experience', 0)
-                    availability = request.data.get('availability', false)
-                    hourlyRate = request.data.get('hourlyRate', 0.0)
-                    skills = request.data.get('skills', [])
-                    
                     # Create FreelanceChef instance
-                    freelance_chef = FreelanceChef.objects.create(
-                        user=user,
-                        location=location,
-                        experience=experience,
-                        availability=availability,
-                        hourlyRate= hourlyRate
-                    )
-                    freelance_chef.skills.add(*skills)
-                    
-                else:
-                    # Update existing FreelanceChef instance with new data
-                    freelance_chef.location = request.data.get('location', freelance_chef.location)
-                    freelance_chef.experience = request.data.get('experience', freelance_chef.experience)
-                    freelance_chef.availability = request.data.get('availability', freelance_chef.availability)
-                    freelance_chef.hourlyRate = request.data.get('hourlyRate', freelance_chef.hourlyRate)
-                    freelance_chef.skills.clear()  # Clear existing skills
-                    freelance_chef.skills.add(*request.data.get('skills', []))  # Add new skills
-                    freelance_chef.save()
-
+                    freelance_chef = FreelanceChef.objects.create(user=user)
+                
+                # Update FreelanceChef instance with new data
+                freelance_chef.location = request.data.get('location', freelance_chef.location)
+                freelance_chef.experience = request.data.get('experience', freelance_chef.experience)
+                freelance_chef.availability = request.data.get('availability', freelance_chef.availability)
+                freelance_chef.hourlyRate = request.data.get('hourlyRate', freelance_chef.hourlyRate)
+                freelance_chef.save()
+                
+                # Update or create skills
+                skills_data = request.data.get('skills', [])
+                print(skills_data)
+                for skill_name in skills_data:
+                    skill, created = Skill.objects.get_or_create(skill_name=skill_name)
+                    freelance_chef.skills.add(skill)
+                
                 return Response({'message': 'Profile updated successfully'}, status=status.HTTP_200_OK)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -126,3 +117,47 @@ def profile_view(request):
     
     except TokenError as e:
         raise AuthenticationFailed(str(e))
+
+@api_view(['GET'])
+def get_jobs(request):
+    # Check authorization
+    authorization_header = request.headers.get('Authorization')
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+    
+    if request.method == 'GET':
+        jobs = Job.objects.all()
+        
+        if not jobs:
+            return Response({'status': status.HTTP_404_NOT_FOUND, 'message': 'No jobs found'}, status=status.HTTP_404_NOT_FOUND)
+
+        job_data = []
+        for job in jobs:
+            job_dict = {}
+            job_serializer = JobSerializer(job)
+            job_dict['job'] = job_serializer.data
+            
+            # Fetch user for each job
+            user_serializer = UserSerializer(job.posted_by)
+            job_dict['user'] = user_serializer.data
+            
+            # Assuming Job model has a ManyToManyField to Skill model
+            # Fetching related skills data
+            skill_serializer = SkillSerializer(job.required_skills.all(), many=True)
+            job_dict['skills'] = skill_serializer.data
+            
+            # Check if the job is a favorite for the user
+            is_favorite = SavedJob.objects.filter(user=user, job=job).exists() if user else False
+            job_dict['isFavorite'] = is_favorite
+            
+            job_data.append(job_dict)
+            
+
+        return Response({
+            'status': status.HTTP_200_OK, 
+            'message': 'Jobs fetched successfully', 
+            'data': job_data
+        }, status=status.HTTP_200_OK)
