@@ -124,3 +124,55 @@ export const fetchJob = async (token) => {
       throw error;
     }
   };
+ 
+  export const getJobProposalById = async ({ id, token }) => {
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/proposals/${id}/`,
+  
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };  
+
+  export const saveProposalJob = async ({ data, token }) => {
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/proposals/save/",
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };  
+ 
+  export const approvedProposal = async ({ id, token, data }) => {
+    try {
+      const response = await axios.put(
+        `http://127.0.0.1:8000/api/proposal/approved/${id}/`, data,
+  
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+    
