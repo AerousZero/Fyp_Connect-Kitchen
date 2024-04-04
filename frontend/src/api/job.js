@@ -62,3 +62,32 @@ export const fetchJob = async (token) => {
     }
   };
   
+  export const fetchJobById = async ({ id, token }) => {
+    console.log(token, "id");
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/job/${id}/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response;
+    } catch (error) {
+      throw error; // Re-throw error for handling at calling location
+    }
+  };
+  
+  export const fetchJobByCreator = async (token) => {
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/job/getJob/creator`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw error; // Re-throw error for handling at calling location
+    }
+  };  
