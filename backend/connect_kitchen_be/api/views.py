@@ -428,3 +428,35 @@ def get_proposal_by_id(request, proposal_id):
     except Exception as e:
         return Response({'error': 'Failed to retrieve proposal. Invalid token or unauthorized.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+# Client Approves Chef Proposal 
+@api_view(['PUT'])
+def update_proposal_acceptance(request, proposal_id):
+    authorization_header = request.headers.get('Authorization')
+    
+    if not authorization_header:
+        return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        user_id = decode_token(authorization_header)
+        
+        # Check if the user's role is "client"
+        user_role = User.objects.get(id=user_id).role.name
+        if user_role != "client":
+            return Response({'error': 'Unauthorized: Only clients can update proposal acceptance'}, status=status.HTTP_403_FORBIDDEN)
+        
+        proposal = JobProposal.objects.get(id=proposal_id)
+        
+        # Update the is_accepted field based on request data
+        is_shortlisted = request.data.get('is_shortlisted')
+        if is_shortlisted is not None:
+            proposal.is_shortlisted = is_shortlisted
+            proposal.save()
+            
+            return Response({'status': status.HTTP_200_OK, 'message': 'Proposal  updated successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'is_shortlisted field is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    except JobProposal.DoesNotExist:
+        return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': 'Failed to update proposal acceptance'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
