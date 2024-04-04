@@ -176,3 +176,21 @@ export const fetchJob = async (token) => {
     }
   };
     
+
+  export const hireProposal = async ({ id, token, data }) => {
+    try {
+      const response = await axios.put(
+        `http://127.0.0.1:8000/api/proposal/hire/${id}/`, data,
+  
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+  
