@@ -221,7 +221,7 @@ function ChefProfile({ user }) {
   };
 
   const handleSaveSkills = () => {
-    const userData = { skills: editedSkills };
+    const userData = { skills:  editedSkills.split(',').map(skill => skill.trim()) };
     updateUser(userData)
       .then((response) => {
         notification.success({ message: response.message });
@@ -399,36 +399,49 @@ function ChefProfile({ user }) {
             </dd>
           </div>
           <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6 relative">
-            <dt className="text-sm font-medium text-gray-500">Skills</dt>
-            <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
-              {editingSkills ? (
-                <>
-                  <input
-                    type="text"
-                    value={editedSkills}
-                    onChange={(e) => setEditedSkills(e.target.value)}
-                  />
-                  <button
-                    className="text-indigo-600 hover:text-indigo-900 ml-2"
-                    onClick={handleSaveSkills}
-                  >
-                    Save
-                  </button>
-                </>
-              ) : (
-                <>
-                  {skills}
-                  <button
-                    className="text-indigo-600 hover:text-indigo-900 ml-2"
-                    aria-label="Edit Skills"
-                    onClick={() => setEditingSkills(true)}
-                  >
-                    <FaEdit />
-                  </button>
-                </>
-              )}
-            </dd>
-          </div>
+  <dt className="text-sm font-medium text-gray-500">Skills</dt>
+  <dd className="mt-1 text-sm text-gray-900 sm:col-span-2">
+    {editingSkills ? (
+      <>
+        <input
+          type="text"
+          value={editedSkills}
+          onChange={(e) => setEditedSkills(e.target.value)}
+        />
+        <button
+          className="text-indigo-600 hover:text-indigo-900 ml-2"
+          onClick={handleSaveSkills}
+        >
+          Save
+        </button>
+      </>
+    ) : (
+      <>
+        {skills && skills.length > 0 ? (
+          <>
+            {skills.map((skill, index) => (
+              <span key={index}>
+                {skill}
+                {index !== skills.length - 1 && ', '} {/* Add comma after each skill except the last one */}
+              </span>
+            ))}
+          </>
+        ) : (
+          <span>No skills</span>
+        )}
+        <button
+          className="text-indigo-600 hover:text-indigo-900 ml-2"
+          aria-label="Edit Skills"
+          onClick={() => setEditingSkills(true)}
+        >
+          <FaEdit />
+        </button>
+      </>
+    )}
+  </dd>
+</div>
+
+
         </dl>
       </div>
     </div>
