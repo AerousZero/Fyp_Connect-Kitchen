@@ -395,3 +395,36 @@ def get_proposals_by_job(request, job_id):
         return Response({'status': status.HTTP_200_OK, 'message': 'Jobs fetched successfully', 'data': proposals_data}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': 'Failed to retrieve proposals. Invalid token or unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+@api_view(['GET'])
+def get_proposal_by_id(request, proposal_id):
+    authorization_header = request.headers.get('Authorization')
+    
+    if not authorization_header:
+        return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        user_id = decode_token(authorization_header)
+        proposal = JobProposal.objects.get(id=proposal_id)
+        user = User.objects.get(id=proposal.user.id)
+        
+        # Fetch user details for the proposal
+        user_data = {
+            'id': proposal.user.id,
+            'name': f"{proposal.user.first_name} {proposal.user.last_name}",
+            'email': proposal.user.email,
+            # Add more user fields as needed
+        }
+        
+        # Serialize proposal data
+        proposal_data = ProposalSerializer(proposal).data
+        proposal_data['user'] = user_data
+        
+        return Response({'status': status.HTTP_200_OK, 'message': 'Proposal fetched successfully', 'data': proposal_data}, status=status.HTTP_200_OK)
+    
+    except JobProposal.DoesNotExist:
+        return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    except Exception as e:
+        return Response({'error': 'Failed to retrieve proposal. Invalid token or unauthorized.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
