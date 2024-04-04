@@ -90,4 +90,37 @@ export const fetchJob = async (token) => {
     } catch (error) {
       throw error; // Re-throw error for handling at calling location
     }
-  };  
+  }; 
+  
+  export const getJobProposalByUser = async (token) => {
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/proposals/user/`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+  
+  export const getJobProposalByJob = async ({ id, token }) => {
+    try {
+      const response = await axios.get(
+        `http://127.0.0.1:8000/api/proposals/job/${id}/`,
+  
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
