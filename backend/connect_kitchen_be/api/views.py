@@ -241,7 +241,7 @@ def delete_saved_job_view(request, saved_job_id):
         return Response({'status': status.HTTP_404_NOT_FOUND, 'message': 'Saved job not found'}, status=status.HTTP_404_NOT_FOUND)
     
 
-    
+
 
 @api_view(['GET', 'OPTIONS'])
 def get_job_by_id(request, job_id):
@@ -270,4 +270,48 @@ def get_job_data(job, request):
     job_data['isFavorite'] = check_if_favorite(job, request)
     
     return job_data
+
+def get_user_data(user):
+    user_serializer = UserSerializer(user)
+    total_jobs_posted = Job.objects.filter(posted_by=user).count()
+    user_data = user_serializer.data
+    user_data['total_jobs_posted'] = total_jobs_posted
+    return user_data
+
+
+def get_skills_data(job):
+    skill_serializer = SkillSerializer(job.required_skills.all(), many=True)
+    return skill_serializer.data
+
+
+def check_if_favorite(job, request):
+    authorization_header = request.headers.get('Authorization')
+    if authorization_header:
+        try:
+            user_id = decode_token(authorization_header)
+            user = User.objects.get(id=user_id)
+            return SavedJob.objects.filter(user=user, job=job).exists()
+        except Exception as e:
+            pass
+    return False
+
+# Fetch job created by users
+@api_view(['GET'])
+def get_jobs_by_user(request):
+    authorization_header = request.headers.get('Authorization')
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+    
+    jobs = Job.objects.filter(posted_by=user.id)
+    job_data = []
+    for job in jobs:
+        job_dict = {}
+        job_dict['job'] = JobSerializer(job).data
+        job_dict['skills'] = SkillSerializer(job.required_skills.all(), many=True).data
+        job_data.append(job_dict)
+    
+    return Response({'status': status.HTTP_200_OK, 'message': 'Jobs fetched successfully', 'data': job_data})
 
