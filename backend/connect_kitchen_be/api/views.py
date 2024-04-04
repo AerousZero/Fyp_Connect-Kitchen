@@ -315,3 +315,31 @@ def get_jobs_by_user(request):
     
     return Response({'status': status.HTTP_200_OK, 'message': 'Jobs fetched successfully', 'data': job_data})
 
+
+@api_view(['POST'])
+def save_proposal(request):
+    authorization_header = request.headers.get('Authorization')
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+
+    # Extract job ID from request data
+    job_id = request.data.get('job')
+
+    # Validate job ID
+    if not job_id:
+        return Response({'status': status.HTTP_400_BAD_REQUEST, 'message': 'Job ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    serializer_data = {
+        'user': user.id,  
+        'job': job_id,    
+        **request.data    
+    }
+
+    serializer = ProposalSerializer(data=serializer_data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'status': status.HTTP_201_CREATED, 'message': 'Job proposal submitted successfully'}, status=status.HTTP_201_CREATED)
+    return Response({'status': status.HTTP_400_BAD_REQUEST, 'message': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
