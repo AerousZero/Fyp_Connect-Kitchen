@@ -460,3 +460,37 @@ def update_proposal_acceptance(request, proposal_id):
         return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': 'Failed to update proposal acceptance'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Client hires chef on proposal 
+@api_view(['PUT'])
+def hire_proposal(request, proposal_id):
+    authorization_header = request.headers.get('Authorization')
+    
+    if not authorization_header:
+        return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        user_id = decode_token(authorization_header)
+        
+        # Check if the user's role is "client"
+        user_role = User.objects.get(id=user_id).role.name
+        if user_role != "client":
+            return Response({'error': 'Unauthorized: Only clients can update proposal acceptance'}, status=status.HTTP_403_FORBIDDEN)
+        
+        proposal = JobProposal.objects.get(id=proposal_id)
+        
+        # Update the is_accepted field based on request data
+        is_hired = request.data.get('is_hired')
+        if is_hired is not None:
+            proposal.is_hired = is_hired
+            proposal.save()
+            
+            return Response({'status': status.HTTP_200_OK, 'message': 'Proposal  updated successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'is_hired field is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    except JobProposal.DoesNotExist:
+        return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': 'Failed to update proposal acceptance'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
