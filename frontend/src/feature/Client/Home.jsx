@@ -11,7 +11,6 @@ function ClientHome() {
    <ClientLayout>
     <Banner/>
     <ClientNavbar/>
-    <JobList/>
    </ClientLayout>
   );
 }
