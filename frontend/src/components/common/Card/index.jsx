@@ -1,66 +1,163 @@
-import React, { useState, useEffect } from 'react';
-import Loader from '../Loader';
+import React, { useState, useEffect } from "react";
+import Loader from "../Loader";
+import {
+  EnvironmentOutlined,
+  DollarCircleOutlined,
+  HeartOutlined,
+} from "@ant-design/icons";
+import Cookies from "js-cookie";
+import { whiteListJob } from "../../../api/job";
+import { notification } from "antd";
+import { Link } from "react-router-dom";
 
-const Card = () => {
-  const [isLoading, setIsLoading] = useState(true); 
-  const [projectName, setProjectName] = useState("");
-  const [location, setLocation] = useState("");
-  const [price, setPrice] = useState("");
-  const [requirements, setRequirements] = useState("");
+const Card = ({ jobList }) => {
+  const { job, user, skills, isFavorite } = jobList;
 
-  // Simulating data fetching with setTimeout
+  const [isLoading, setIsLoading] = useState(true);
+  const [timeElapsed, setTimeElapsed] = useState(null);
+  const [isFavorites, setIsFavorites] = useState(isFavorite);
+
   useEffect(() => {
-    const fetchData = () => {
-      // Simulated delay of 2 seconds
-      setTimeout(() => {
-        setProjectName("Sample Project");
-        setLocation("New York, USA");
-        setPrice("$1000");
-        setRequirements("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed et enim a elit sodales hendrerit vel id nisi.");
-        setIsLoading(false); // Set loading to false after data fetching
-      }, 60000);
-    };
+    setIsLoading(false);
+    if (job) {
+      const postedTime = new Date(job.created_at);
+      const currentTime = new Date();
+      const elapsedTimeInMilliseconds = currentTime - postedTime;
 
-    fetchData();
-  }, []);
+      const millisecondsPerMinute = 1000 * 60;
+      const millisecondsPerHour = millisecondsPerMinute * 60;
+      const millisecondsPerDay = millisecondsPerHour * 24;
+
+      const days = Math.floor(elapsedTimeInMilliseconds / millisecondsPerDay);
+      const hours = Math.floor(
+        (elapsedTimeInMilliseconds % millisecondsPerDay) / millisecondsPerHour
+      );
+      const minutes = Math.floor(
+        (elapsedTimeInMilliseconds % millisecondsPerHour) /
+          millisecondsPerMinute
+      );
+
+      let timeElapsedString = "";
+      if (days > 0) {
+        timeElapsedString += `${days}d `;
+      }
+      if (hours > 0) {
+        timeElapsedString += `${hours}h `;
+      }
+      if (minutes > 0 || timeElapsedString === "") {
+        timeElapsedString += `${minutes}m`;
+      }
+
+      setTimeElapsed(timeElapsedString);
+    }
+  }, [job]);
+
+  const handleFavorite = async () => {
+    try {
+      const token = Cookies.get("accessToken");
+      const response = await whiteListJob(job.id, token);
+      if (response.status === 201) {
+        setIsFavorites(true);
+        notification.success({ message: response.data.message });
+      } else if (response.status === 401) {
+        notification.error({ message: response.data.message });
+      }
+    } catch (error) {
+      notification.error({ message: "Something error occurred" });
+    }
+  };
 
   return (
-    <div className="container mx-auto bg-white shadow-md rounded border border-2-black overflow-hidden">
-      {isLoading ? ( 
+    <div className="container mx-auto bg-white shadow-md rounded-lg border border-gray-300 overflow-hidden relative">
+      {isLoading ? (
         <Loader />
-      ) : (
-        <div>
+      ) : job ? (
+        <Link to={`/job/details/${job.id}`}>
           <div className="px-6 py-4">
-            <div className="font-bold text-xl mb-2">{projectName}</div>
-            <div className="flex items-center mb-4">
-              <svg className="w-4 h-4 fill-current text-gray-500 mr-2" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 2.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zm0 1a4.5 4.5 0 100 9 4.5 4.5 0 000-9zm0 5a.5.5 0 11-.001 1.001A.5.5 0 0110 8.5zM7 9a1 1 0 100-2 1 1 0 000 2zm6 0a1 1 0 100-2 1 1 0 000 2zM7 8a1 1 0 000 2h6a1 1 0 000-2H7z"/>
-              </svg>
-              <p className="text-gray-700 text-sm">{location}</p>
+            <div className="flex items-center mb-2">
+              <p className="text-gray-700 text-xs font-semibold mr-1">
+                Posted {timeElapsed} minutes ago
+              </p>
+              {user && (
+                <HeartOutlined
+                  className={
+                    isFavorites
+                      ? "text-green-500 text-bold absolute right-4 top-4"
+                      : "text-black absolute right-4 top-4"
+                  }
+                  onClick={handleFavorite}
+                />
+              )}
             </div>
-            <div className="flex items-center mb-4">
-              <svg className="w-4 h-4 fill-current text-gray-500 mr-2" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm0 1a9 9 0 100-18 9 9 0 000 18zm0-9a1 1 0 00-1 1v3a1 1 0 102 0v-3a1 1 0 00-1-1zM9 8a1 1 0 10-2 0v1a1 1 0 102 0V8zm4 0a1 1 0 10-2 0v1a1 1 0 102 0V8z"/>
-              </svg>
-              <p className="text-gray-700 text-sm">{price}</p>
+            <div className="flex items-center mb-2">
+              <div className="font-bold text-green-500 text-xl mr-2">
+                {job.title}
+              </div>
             </div>
-            <p className="text-gray-700 text-base mb-4">{requirements}</p>
+            <div className="flex flex-wrap">
+              <div className="bg-gray-100 text-green-900 text-xs px-2 py-1 rounded-full font-semibold mr-2">
+                {job.payment_type}
+              </div>
+              <div className="bg-blue-100 text-black text-xs px-2 py-1 rounded-full font-semibold mr-2">
+                {job.experience_level}
+              </div>
+              <div className="bg-blue-100 text-black text-xs px-2 py-1 rounded-full font-semibold">
+                ${job.fixed_budget}
+              </div>
+            </div>
+            <div className="flex text-black text-xs mt-2 rounded-full font-semibold">
+              <EnvironmentOutlined className="w-4 h-3 fill-current text-gray-500" />
+              <p className="text-gray-700 text-sm">{job.location}</p>
+            </div>
+            <p className="text-gray-700 text-base mb-2">{job.description}</p>
+            {user && (
+              <div className="flex items-center mb-2">
+                <p className="text-gray-700 text-sm font-semibold mr-1">
+                  Posted by:
+                </p>
+                <p className="text-gray-700 text-sm">
+                  {user.first_name} {user.last_name}
+                </p>
+              </div>
+            )}
+
+            {skills.length > 0 && (
+              <div className="flex items-center mb-2">
+                <p className="text-gray-700 text-sm font-semibold mr-1">
+                  Skills:
+                </p>
+                <div>
+                  {skills.map((skill) => (
+                    <span
+                      key={skill.id}
+                      className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-1 mb-1"
+                    >
+                      {skill.skill_name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+           {job.is_hired ? <span className="text-red-500 font-bold text-xs">**Client already hired someone</span> : null}
+
+
+            {user === undefined && (
+              <Link to={`/client/job/proposal/${job.id}`}>
+                <button className="bg-green-500 text-white rounded-full w-[200px] hover:bg-blue-700 text-white font-bold py-2 px-4 mr-4 rounded">
+                  View All Proposal
+                </button>
+              </Link>
+            )}
           </div>
-          <div className="px-6 py-2">
-            <Tag label="#Tag1" />
-            <Tag label="#Tag2" />
-            <Tag label="#Tag3" />
-          </div>
+        </Link>
+      ) : (
+        <div className="flex justify-center items-center">
+          <p>No data available</p>
         </div>
       )}
     </div>
   );
-}
-
-const Tag = ({ label }) => (
-  <span className="inline-block bg-gray-200 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">
-    {label}
-  </span>
-);
+};
 
 export default Card;
