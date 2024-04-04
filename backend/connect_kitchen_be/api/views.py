@@ -344,7 +344,7 @@ def save_proposal(request):
         return Response({'status': status.HTTP_201_CREATED, 'message': 'Job proposal submitted successfully'}, status=status.HTTP_201_CREATED)
     return Response({'status': status.HTTP_400_BAD_REQUEST, 'message': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-#api to fetch propsla bu user
+#API to look for submitted proposal
 @api_view(['GET'])
 def get_proposals_by_user(request):
     authorization_header = request.headers.get('Authorization')
@@ -362,3 +362,36 @@ def get_proposals_by_user(request):
         return Response({'status': status.HTTP_200_OK, 'message': 'Jobs fetched successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({'error': 'Failed to retrieve proposals'}, status=status.HTTP_400_BAD_REQUEST)
+
+def add_is_submitted(proposals):
+    for proposal in proposals:
+        proposal['isSubmitted'] = True
+
+#api to fetch propsla bu job
+@api_view(['GET'])
+def get_proposals_by_job(request, job_id):
+    authorization_header = request.headers.get('Authorization')
+    if not authorization_header:
+        return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        user_id = decode_token(authorization_header)
+        proposals = JobProposal.objects.filter(job=job_id)
+        
+        proposals_data = []
+        for proposal in proposals:
+            # Fetch user details for each proposal
+            user = User.objects.get(id=proposal.user.id)
+            user_data = {
+                'id': user.id,
+                'name': user.first_name + ' ' + user.last_name,
+                'email': user.last_name,
+                # Add more user fields as needed
+            }
+            proposal_data = ProposalSerializer(proposal).data
+            proposal_data['user'] = user_data
+            proposals_data.append(proposal_data)
+        
+        return Response({'status': status.HTTP_200_OK, 'message': 'Jobs fetched successfully', 'data': proposals_data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': 'Failed to retrieve proposals. Invalid token or unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
