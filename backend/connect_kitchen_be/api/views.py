@@ -343,3 +343,22 @@ def save_proposal(request):
         serializer.save()
         return Response({'status': status.HTTP_201_CREATED, 'message': 'Job proposal submitted successfully'}, status=status.HTTP_201_CREATED)
     return Response({'status': status.HTTP_400_BAD_REQUEST, 'message': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+#api to fetch propsla bu user
+@api_view(['GET'])
+def get_proposals_by_user(request):
+    authorization_header = request.headers.get('Authorization')
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+        
+        # Fetch proposals based on user's role
+        if user.role.name == 'chef':
+            proposals = JobProposal.objects.filter(user=user.id)
+            serializer = ProposalSerializer(proposals, many=True)
+            add_is_submitted(serializer.data)
+       
+
+        return Response({'status': status.HTTP_200_OK, 'message': 'Jobs fetched successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': 'Failed to retrieve proposals'}, status=status.HTTP_400_BAD_REQUEST)
