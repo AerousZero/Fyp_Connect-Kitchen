@@ -1,22 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ClientLayout from "../Layout";
 import { useForm } from "react-hook-form";
+import { addJob } from "../../../api/job";
+import { notification } from "antd";
+import Cookies from "js-cookie";
 
 function CreateJob() {
-     const {
+    const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
-  const [jobTitle, setJobTitle] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
-  const [jobDuration, setJobDuration] = useState("");
-  const [jobExperience, setJobExperience] = useState("");
+  const [formData, setFormData] = useState({
+     title:"",
+     required_skills:[],
+     required_experience:"",
+     description:"",
+     hourly_rate:"",
+     fixed_budget:"",
+     location:"kathmandu",
+     duration:"",
+     posted_by:""
+  });
   const [budgetType, setBudgetType] = useState("fixed");
-  const [budget, setBudget] = useState("");
-  const [hourlyRateFrom, setHourlyRateFrom] = useState("");
-  const [hourlyRateTo, setHourlyRateTo] = useState("");
-  const [contractToHire, setContractToHire] = useState(false);
   const [step, setStep] = useState(1);
   const [progress, setProgress] = useState(0);
   const [leftText, setLeftText] = useState({
@@ -25,46 +31,87 @@ function CreateJob() {
       "This helps your job post stand out to the right candidates. It’s the first thing they’ll see, so make it count!",
   });
   const [nextDisabled, setNextDisabled] = useState(true);
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const userIdFromCookie = Cookies.get("userId");
+    setUserId(userIdFromCookie);
+  }, []);
 
   const handleJobTitleChange = (event) => {
-    const title = event.target.value;
-    setJobTitle(title);
-    setNextDisabled(title === "");
-  };
+  const ntitle = event.target.value;
+  console.log(ntitle);
+  setFormData((prevData) => ({
+    ...prevData,
+    title: ntitle,
+  }));
+  setNextDisabled(ntitle === "");
+};
 
-  const handleJobDescriptionChange = (event) => {
-    setJobDescription(event.target.value);
-  };
+const handleJobDescriptionChange = (event) => {
+  const description = event.target.value;
+  setFormData((prevData) => ({
+    ...prevData,
+    description: description,
+  }));
+};
 
-  const handleJobDurationChange = (event) => {
-    setJobDuration(event.target.value);
-  };
+const handleJobDurationChange = (event) => {
+  const duration = event.target.value;
+  setFormData((prevData) => ({
+    ...prevData,
+    duration: duration,
+  }));
+};
 
-  const handleJobExperienceChange = (event) => {
-    setJobExperience(event.target.value);
-  };
+const handleJobExperienceChange = (event) => {
+  const requiredExperience = event.target.value;
+  setFormData((prevData) => ({
+    ...prevData,
+    required_experience: requiredExperience,
+  }));
+};
 
-  const handleBudgetTypeChange = (event) => {
-    setBudgetType(event.target.value);
-  };
+const handleBudgetTypeChange = (event) => {
+  setBudgetType(event.target.value);
+};
 
-  const handleBudgetChange = (event) => {
-    setBudget(event.target.value);
-  };
+const handleBudgetChange = (event) => {
+  const fixedBudget = event.target.value;
+  setFormData((prevData) => ({
+    ...prevData,
+    fixed_budget: fixedBudget,
+  }));
+};
 
-  const handleHourlyRateFromChange = (event) => {
-    setHourlyRateFrom(event.target.value);
-  };
+const handleHourlyRateFromChange = (event) => {
+  const hourlyRate = event.target.value;
+  setFormData((prevData) => ({
+    ...prevData,
+    hourly_rate: hourlyRate,
+  }));
+};
 
-  const handleHourlyRateToChange = (event) => {
-    setHourlyRateTo(event.target.value);
-  };
+const handleHourlyRateToChange = (event) => {
+  const hourlyRateTo = event.target.value;
+  setFormData((prevData) => ({
+    ...prevData,
+    hourly_rate_to: hourlyRateTo,
+  }));
+};
 
-  const handleContractToHireChange = (event) => {
-    setContractToHire(event.target.checked);
-  };
+const handleJobSkillsChange = (event)  => {
+  const skills = event.target.value;
+  const skillsArray = skills.split(','); 
+  setFormData((prevData) => ({
+    ...prevData,
+    required_skills: skillsArray,
+  }))
+}
 
-  const handleNext = (event) => {
+
+
+  const handleNext = async(event) => {
     event.preventDefault();
     if (step === 1) {
       setStep(2);
@@ -95,7 +142,8 @@ function CreateJob() {
       });
       setProgress(100);
     } else if (step === 5) {
-      // Handle form submission
+      const token = await Cookies.get("accessToken");
+      handleSubmit(addJobHandler(formData, token));
     }
   };
 
@@ -132,11 +180,31 @@ function CreateJob() {
     }
   };
 
-  const onSubmit = (data) => {
-    // Handle form submission with data
-    console.log(data);
-  };
 
+
+  const addJobHandler = async (formData, token) => {
+    console.log(formData, "data");
+    try {
+      formData.posted_by = userId;
+      const response = await addJob(formData, token);
+      console.log(response, "response")
+      if (response.status === 201) {
+        notification.success({ message: response.data.message });
+        window.location.reload()
+      } else {
+        notification.error({ message: "An unexpected error occurred" });
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 400) {
+      notification.error({
+        message: "Bad Request: " + error.response.data.message,
+      });
+    }  else {
+      notification.error({ message: "An unexpected error occurred" });
+    }
+    }
+  };
+ 
   return (
     <ClientLayout>
       <div className="flex flex-col h-full">
@@ -154,7 +222,8 @@ function CreateJob() {
 
           <div className="w-1/2  flex items-center justify-center">
             <div className="max-w-md">
-              <form onSubmit={handleNext} className="p-8">
+             <form onSubmit={handleSubmit(handleNext)} className="p-8">
+
                 {step === 1 && (
                   <div className="mb-4">
                     <label
@@ -166,8 +235,9 @@ function CreateJob() {
                     <input
                       type="text"
                       id="jobTitle"
+                      name="title"
                       className="h-10 w-full rounded-md border border-black px-4 py-2"
-                      value={jobTitle}
+                      value={formData.title}
                       onChange={handleJobTitleChange}
                       placeholder="Enter job title"
                     />
@@ -184,9 +254,10 @@ function CreateJob() {
                     </label>
                     <textarea
                       id="jobDescription"
+                      name="required_skills"
                       className="h-20 w-full rounded-md border border-black px-4 py-2"
-                      value={jobDescription}
-                      onChange={handleJobDescriptionChange}
+                      value={formData.required_skills}
+                      onChange={handleJobSkillsChange}
                       placeholder="Enter job description"
                     />
                   </div>
@@ -203,8 +274,9 @@ function CreateJob() {
                     <input
                       type="text"
                       id="jobDuration"
+                      name="duration"
                       className="h-10 w-full rounded-md border border-black px-4 py-2"
-                      value={jobDuration}
+                      value={formData.duration}
                       onChange={handleJobDurationChange}
                       placeholder="Enter job duration"
                     />
@@ -217,8 +289,9 @@ function CreateJob() {
                     <input
                       type="text"
                       id="jobExperience"
+                      name="required_experience"
                       className="h-10 w-full rounded-md border border-black px-4 py-2"
-                      value={jobExperience}
+                      value={formData.required_experience}
                       onChange={handleJobExperienceChange}
                       placeholder="Enter job experience"
                     />
@@ -264,8 +337,9 @@ function CreateJob() {
                         <input
                           type="text"
                           id="budget"
+                          name="fixed_budget"
                           className="h-10 w-full rounded-md border border-black px-4 py-2"
-                          value={budget}
+                          value={formData.fixed_budget}
                           onChange={handleBudgetChange}
                           placeholder="Enter budget"
                         />
@@ -283,8 +357,9 @@ function CreateJob() {
                         <input
                           type="text"
                           id="hourlyRateFrom"
+                          name="hourly_rate"
                           className="h-10 w-full rounded-md border border-black px-4 py-2"
-                          value={hourlyRateFrom}
+                          value={formData.hourly_rate}
                           onChange={handleHourlyRateFromChange}
                           placeholder="Enter hourly rate from"
                         />{" "}
@@ -319,8 +394,9 @@ function CreateJob() {
                     </label>
                     <textarea
                       id="jobDetails"
+                      name="description"
                       className="h-20 w-full rounded-md border border-black px-4 py-2"
-                      value={jobDescription} // Or whatever state variable you want to use for job details
+                      value={formData.description} // Or whatever state variable you want to use for job details
                       onChange={handleJobDescriptionChange}
                       placeholder="Enter job details"
                     />
