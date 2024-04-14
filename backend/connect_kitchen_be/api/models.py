@@ -5,6 +5,9 @@ from enum import Enum
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
+def upload_to(instance, filename):
+    return 'images/{filename}'.format(filename=filename)
+
 class User(models.Model):
     first_name = models.CharField(max_length=100, default="")
     last_name = models.CharField(max_length=100, default="")
@@ -12,6 +15,7 @@ class User(models.Model):
     username = models.CharField(max_length=100, unique=True)
     password = models.CharField(max_length=255)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
+    profile_image = models.ImageField(upload_to=upload_to, blank=True, null=True)
 
 #User Skill
 class Skill(models.Model):

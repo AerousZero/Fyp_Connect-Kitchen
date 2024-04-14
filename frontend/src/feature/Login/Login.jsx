@@ -39,6 +39,7 @@ const Login = () => {
       const response = await getUser(token);
       console.log(response.data.role.name, "response for profile");
       dispatch(updateUserDetails(response.data));
+      setCookie("userId", response.data.id);
       redirectBasedOnRole(response.data.role.name);
     } catch (error) {
       // Handle error

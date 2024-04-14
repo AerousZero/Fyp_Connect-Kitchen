@@ -35,7 +35,7 @@ const Register = (role) => {
 
   const registerHandler = async (data) => {
     try {
-      data.role = role;
+      data.role = role.role;
       const response = await signUp(data);
       console.log(response, "response,");
       if (response.status === 201) {
@@ -69,7 +69,7 @@ const Register = (role) => {
             <input
               type="firstName"
               id="firstName"
-              {...register("firstName", { required: "firstName is required." })}
+              {...register("first_name", { required: "firstName is required." })}
               className={`w-full px-4 py-3 rounded-lg border-2 border-black focus:border-blue-500 focus:outline-none ${
                 errors.username ? "border-red-500" : ""
               }`}
@@ -88,7 +88,7 @@ const Register = (role) => {
             <input
               type="LastName"
               id="LastName"
-              {...register("lastName", { required: "LastName is required." })}
+              {...register("last_name", { required: "LastName is required." })}
               className={`w-full px-4 py-3 rounded-lg border-2 border-black focus:border-blue-500 focus:outline-none ${
                 errors.username ? "border-red-500" : ""
               }`}

@@ -121,6 +121,37 @@ def profile_view(request):
     
 
 # Job Posting
+# Job Posting by client
+
+@api_view(['POST'])
+def add_post_view(request):
+    # Check authorization
+    authorization_header = request.headers.get('Authorization')
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+
+    if request.method == 'POST':
+        skills_data = request.data.get('required_skills', [])
+
+        # Create the job instance
+        serializer = JobSerializer(data=request.data)
+        if serializer.is_valid():
+            job_instance = serializer.save(posted_by=user)
+            skills_data = request.data.get('required_skills', [])
+            print(skills_data)
+            for skill_name in skills_data:
+                    skill, created = Skill.objects.get_or_create(skill_name=skill_name)
+                    job_instance.required_skills.add(skill)
+
+            return Response({'status': status.HTTP_201_CREATED, 'message': 'Job created successfully'}, status=status.HTTP_201_CREATED)
+        
+        # Return job validation errors
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['GET'])
 def get_jobs(request):
     # Check authorization

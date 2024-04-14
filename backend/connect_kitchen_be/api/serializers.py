@@ -59,7 +59,7 @@ class JobSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Job
-        fields = '__all__'
+        exclude = ['required_skills']
 
     def get_payment_type(self, obj):
         if obj.fixed_budget is not None:
@@ -95,8 +95,6 @@ class JobSerializer(serializers.ModelSerializer):
             job = obj
             return job.objects.filter(user=user, job=job, is_hired=True).exists()
         return False
-
-
 
 class SavedJobSerializer(serializers.ModelSerializer):
    

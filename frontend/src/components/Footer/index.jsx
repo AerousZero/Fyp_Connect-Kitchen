@@ -33,7 +33,7 @@ function Footer() {
         </div>
         <div className="w-full md:w-1/2 lg:w-1/4 px-4 mb-4 md:mb-0">
           <h2 className="text-lg font-semibold mb-2">Contact</h2>
-          <p className="text-sm">Email: ConnectKitchen@example.com</p>
+          <p className="text-sm">Email: info@example.com</p>
           <p className="text-sm">Phone: +123456789</p>
         </div>
       </div>
