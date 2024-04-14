@@ -12,9 +12,10 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth.hashers import make_password
 from rest_framework.exceptions import NotFound, ValidationError, NotAuthenticated
+from django.http import FileResponse
 
 
-
+# User
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_view(request):
@@ -31,9 +32,17 @@ def register_view(request):
         if User.objects.filter(email=email).exists():
           raise ValidationError({"status":status.HTTP_400_BAD_REQUEST, "message":'Email already exists'})
 
-        role, created = Role.objects.get_or_create(name=role_name)
+        try:
+            roles = Role.objects.get(name=role_name)
+        except Role.DoesNotExist:
+            roles = Role.objects.create(name= role_name)
+
         user_data = request.data.copy()
-        user_data['role'] = role.id
+        user_data['role'] = roles.id
+
+
+
+    
 
         serializer = UserSerializer(data=user_data)
         if serializer.is_valid():
@@ -118,9 +127,8 @@ def profile_view(request):
     
     except TokenError as e:
         raise AuthenticationFailed(str(e))
-    
 
-# Job Posting
+
 # Job Posting by client
 
 @api_view(['POST'])
@@ -150,7 +158,6 @@ def add_post_view(request):
         
         # Return job validation errors
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET'])
 def get_jobs(request):
@@ -195,9 +202,8 @@ def get_jobs(request):
             'message': 'Jobs fetched successfully', 
             'data': job_data
         }, status=status.HTTP_200_OK)
-    
 
-# Add job to save/favourite section by chef
+# saved job
 @api_view(['POST'])
 def save_job_view(request):
     # Check authorization
@@ -217,9 +223,9 @@ def save_job_view(request):
             serializer.save(user=user)
             return Response({'status': status.HTTP_201_CREATED, 'message': 'Job saved successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
 
-# Fetch Saved Post from list
+
+# get saved job
 @api_view(['GET'])
 def get_saved_jobs_view(request):
     # Check authorization
@@ -260,8 +266,7 @@ def get_saved_jobs_view(request):
 
         return Response({'status': status.HTTP_200_OK, 'message': 'Saved jobs fetched successfully', 'data': saved_job_data}, status=status.HTTP_200_OK)
 
-
-#remove post from favourite list
+#delete saved job
 @api_view(['DELETE'])
 def delete_saved_job_view(request, saved_job_id):
     try:
@@ -270,10 +275,7 @@ def delete_saved_job_view(request, saved_job_id):
         return Response({'status': status.HTTP_204_NO_CONTENT, 'message': 'Job deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except SavedJob.DoesNotExist:
         return Response({'status': status.HTTP_404_NOT_FOUND, 'message': 'Saved job not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-
-
-
+#fetch job by id
 @api_view(['GET', 'OPTIONS'])
 def get_job_by_id(request, job_id):
     try:
@@ -314,7 +316,6 @@ def get_skills_data(job):
     skill_serializer = SkillSerializer(job.required_skills.all(), many=True)
     return skill_serializer.data
 
-
 def check_if_favorite(job, request):
     authorization_header = request.headers.get('Authorization')
     if authorization_header:
@@ -326,7 +327,8 @@ def check_if_favorite(job, request):
             pass
     return False
 
-# Fetch job created by users
+
+# to fetch job created by logged in user
 @api_view(['GET'])
 def get_jobs_by_user(request):
     authorization_header = request.headers.get('Authorization')
@@ -369,13 +371,17 @@ def save_proposal(request):
         **request.data    
     }
 
+    
+    
     serializer = ProposalSerializer(data=serializer_data)
     if serializer.is_valid():
         serializer.save()
         return Response({'status': status.HTTP_201_CREATED, 'message': 'Job proposal submitted successfully'}, status=status.HTTP_201_CREATED)
     return Response({'status': status.HTTP_400_BAD_REQUEST, 'message': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-#API to look for submitted proposal
+
+
+#api to fetch proposal by user
 @api_view(['GET'])
 def get_proposals_by_user(request):
     authorization_header = request.headers.get('Authorization')
@@ -398,7 +404,7 @@ def add_is_submitted(proposals):
     for proposal in proposals:
         proposal['isSubmitted'] = True
 
-#api to fetch propsla bu job
+##api to fetch propsla bu job
 @api_view(['GET'])
 def get_proposals_by_job(request, job_id):
     authorization_header = request.headers.get('Authorization')
@@ -408,6 +414,7 @@ def get_proposals_by_job(request, job_id):
     try:
         user_id = decode_token(authorization_header)
         proposals = JobProposal.objects.filter(job=job_id)
+        
         
         proposals_data = []
         for proposal in proposals:
@@ -439,6 +446,8 @@ def get_proposal_by_id(request, proposal_id):
         proposal = JobProposal.objects.get(id=proposal_id)
         user = User.objects.get(id=proposal.user.id)
         
+       
+        
         # Fetch user details for the proposal
         user_data = {
             'id': proposal.user.id,
@@ -446,10 +455,13 @@ def get_proposal_by_id(request, proposal_id):
             'email': proposal.user.email,
             # Add more user fields as needed
         }
+         # Check if the user associated with the proposal is hired
+        user_hired = proposal.is_hired
         
         # Serialize proposal data
         proposal_data = ProposalSerializer(proposal).data
         proposal_data['user'] = user_data
+        proposal_data['user_hired'] = user_hired
         
         return Response({'status': status.HTTP_200_OK, 'message': 'Proposal fetched successfully', 'data': proposal_data}, status=status.HTTP_200_OK)
     
@@ -459,7 +471,8 @@ def get_proposal_by_id(request, proposal_id):
     except Exception as e:
         return Response({'error': 'Failed to retrieve proposal. Invalid token or unauthorized.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# Client Approves Chef Proposal 
+
+# for client to apprve proposal
 @api_view(['PUT'])
 def update_proposal_acceptance(request, proposal_id):
     authorization_header = request.headers.get('Authorization')
@@ -492,8 +505,7 @@ def update_proposal_acceptance(request, proposal_id):
     except Exception as e:
         return Response({'error': 'Failed to update proposal acceptance'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-# Client hires chef on proposal 
+# for client to hire
 @api_view(['PUT'])
 def hire_proposal(request, proposal_id):
     authorization_header = request.headers.get('Authorization')
@@ -525,3 +537,149 @@ def hire_proposal(request, proposal_id):
         return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({'error': 'Failed to update proposal acceptance'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#complete job api 
+@api_view(['PUT'])
+def complete_job(request, proposal_id):
+    authorization_header = request.headers.get('Authorization')
+    
+    if not authorization_header:
+        return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+        
+        if user.role.name != "client":
+            return Response({'error': 'Unauthorized: Only clients can update proposal acceptance'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            proposal = JobProposal.objects.get(id=proposal_id)
+        except JobProposal.DoesNotExist:
+            return Response({'error': 'Proposal not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        is_completed = request.data.get('is_completed')
+        if is_completed is not None:
+            proposal.is_completed = is_completed
+            proposal.save()
+            return Response({'message': 'Job completed successfully'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'is_completed field is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#add reviw rating
+@api_view(['POST'])
+def add_review_rating(request):
+    authorization_header = request.headers.get('Authorization')
+    
+    if not authorization_header:
+        return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        user_id = decode_token(authorization_header)
+        created_by = request.data.get('createdBy')
+        if created_by != user_id:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        serializer = ReviewRatingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(createdBy=user_id)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+def get_review_ratings(request):
+    authorization_header = request.headers.get('Authorization')
+    
+    if not authorization_header:
+        return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    try:
+        user_id = decode_token(authorization_header)
+        review_ratings = ReviewRating.objects.all()
+        serializer = ReviewRatingSerializer(review_ratings, many=True)
+        user_data = UserSerializer(User.objects.all(), many=True).data
+        created_by_data = UserSerializer(User.objects.all(), many=True).data 
+        response_data = {
+            'review_ratings': serializer.data,
+            'users': user_data,
+            'created_by': created_by_data
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+#fetcg hired chef by client
+@api_view(['GET'])
+def get_hired_chef(request):
+    authorization_header = request.headers.get('Authorization')
+    try:
+        user_id = decode_token(authorization_header)
+        user = User.objects.get(id=user_id)
+    except Exception as e:
+        raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+    
+    jobs = Job.objects.filter(posted_by=user, jobproposal__is_hired=True)
+    job_data = []
+    for job in jobs:
+        job_dict = {}
+        job_dict['job'] = JobSerializer(job).data
+        job_dict['skills'] = SkillSerializer(job.required_skills.all(), many=True).data
+         # Fetch proposals for the job where is_hired is true
+        proposals = job.jobproposal_set.filter(is_hired=True)
+        proposal_data = ProposalSerializer(proposals, many=True).data
+        job_dict['proposals'] = proposal_data
+        job_data.append(job_dict)
+    
+    return Response({'status': status.HTTP_200_OK, 'message': 'Jobs fetched successfully', 'data': job_data})
+# upload api
+@api_view(['PATCH'])
+def upload(request):
+    authorization_header = request.headers.get('Authorization')
+    try:
+        decoded_user_id = decode_token(authorization_header)
+        if not decoded_user_id:
+            raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+    except Exception as e:
+        raise NotAuthenticated({"status": "401", "message": "Unauthorized"})
+    
+    try:
+        user = User.objects.get(pk=decoded_user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+    if 'profile_image' not in request.FILES:
+        return Response({'error': 'No image file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.profile_image = request.FILES['profile_image']
+    user.save()
+
+    serializer = UserSerializer(user)
+
+    # Get profile image URL and add it to the response
+    profile_data = serializer.data
+    profile_data['profile_image_url'] = user.profile_image.url
+
+    return Response(profile_data, status=status.HTTP_200_OK)
+
+## image fetch api
+@api_view(['GET'])
+def get_profile_image(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+        if not user.profile_image:
+            return NotFound("Profile image not found")
+        
+         # Get the profile image file
+        profile_image_file = user.profile_image
+
+        # Serve the image file using FileResponse
+        return FileResponse(open(profile_image_file.path, 'rb'), content_type='application/png')  # Adjust content type based on the image format
+
+        return Response(image_data, content_type=content_type)
+    
+    except User.DoesNotExist:
+        return NotFound("User not found")

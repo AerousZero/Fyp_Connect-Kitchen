@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import register_view, login_view, profile_view, add_post_view, get_jobs, save_job_view, delete_saved_job_view, get_saved_jobs_view, get_job_by_id, save_proposal, get_proposals_by_job, get_proposals_by_user, get_jobs_by_user,get_proposal_by_id, update_proposal_acceptance, hire_proposal
+from .views import register_view, login_view, profile_view, add_post_view, get_jobs, save_job_view, delete_saved_job_view, get_saved_jobs_view, get_job_by_id, save_proposal, get_proposals_by_job, get_proposals_by_user, get_jobs_by_user,get_proposal_by_id, update_proposal_acceptance, hire_proposal, get_hired_chef, complete_job, upload, get_profile_image
 
 
 urlpatterns = [
@@ -21,7 +21,11 @@ urlpatterns = [
     path('proposals/job/<int:job_id>/', get_proposals_by_job, name='get_proposals_by_job'),
     path('proposals/<int:proposal_id>/', get_proposal_by_id, name='get_proposal_by_id'),
     path('proposal/approved/<int:proposal_id>/', update_proposal_acceptance, name='update_proposal_acceptance'),
-    path('proposal/hire/<int:proposal_id>/', hire_proposal, name='hire_proposal')
+    path('proposal/hire/<int:proposal_id>/', hire_proposal, name='hire_proposal'),
+    path('hire/', get_hired_chef, name='get_hired_chef'),
+    path('job/complete/<int:proposal_id>/', complete_job, name='complete_job'),
+    path('upload/', upload, name='upload'),
+    path('profile/image/<int:user_id>/', get_profile_image, name='get_profile_image'),
    
     # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 ]
