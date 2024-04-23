@@ -28,6 +28,26 @@ class FreelanceChefSerializer(serializers.ModelSerializer):
     class Meta:
         model = FreelanceChef
         fields = '__all__'
+        
+class TopFreelanceChefSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(read_only=True)  
+    def get_user(self, obj):
+        user = obj.user  # Accessing the related user object
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'firstName': user.first_name,
+            'lastName':user.last_name,
+            'profile_image': user.profile_image
+            # 'images': user.profile_image
+            # Add more user fields as needed
+        }
+        return user_data
+
+    class Meta:
+        model = FreelanceChef
+        fields = '__all__'
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:

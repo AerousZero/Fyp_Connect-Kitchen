@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Role, User, FreelanceChef, Skill, Job, SavedJob, JobProposal
-from .serializers import UserSerializer, ProfileSerializer, JobSerializer, SkillSerializer, SavedJobSerializer, ProposalSerializer
+from .serializers import UserSerializer, ProfileSerializer, JobSerializer, SkillSerializer, SavedJobSerializer, ProposalSerializer, FreelanceChefSerializer, TopFreelanceChefSerializer, ReviewRatingSerializer
 from .utils import decode_token
 from django.db import connection
 from django.db.utils import Error as DBError
@@ -224,6 +224,19 @@ def save_job_view(request):
             return Response({'status': status.HTTP_201_CREATED, 'message': 'Job saved successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['DELETE'])
+def delete_job(request, id):
+    print("Received request to delete job with ID:", id)
+    print("Type of ID parameter:", type(id))
+
+    try:
+        job = Job.objects.get(id=id)
+    except Job.DoesNotExist:
+        return Response({'message': 'Job not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    job.delete()
+    return Response({'message': 'Job deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
 
 # get saved job
 @api_view(['GET'])
@@ -266,7 +279,7 @@ def get_saved_jobs_view(request):
 
         return Response({'status': status.HTTP_200_OK, 'message': 'Saved jobs fetched successfully', 'data': saved_job_data}, status=status.HTTP_200_OK)
 
-#delete saved job
+#delet saved job
 @api_view(['DELETE'])
 def delete_saved_job_view(request, saved_job_id):
     try:
@@ -275,7 +288,7 @@ def delete_saved_job_view(request, saved_job_id):
         return Response({'status': status.HTTP_204_NO_CONTENT, 'message': 'Job deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
     except SavedJob.DoesNotExist:
         return Response({'status': status.HTTP_404_NOT_FOUND, 'message': 'Saved job not found'}, status=status.HTTP_404_NOT_FOUND)
-#fetch job by id
+#fethc job by id
 @api_view(['GET', 'OPTIONS'])
 def get_job_by_id(request, job_id):
     try:
@@ -381,7 +394,7 @@ def save_proposal(request):
 
 
 
-#api to fetch proposal by user
+#api to fetch propsla bu user
 @api_view(['GET'])
 def get_proposals_by_user(request):
     authorization_header = request.headers.get('Authorization')
@@ -571,6 +584,7 @@ def complete_job(request, proposal_id):
 #add reviw rating
 @api_view(['POST'])
 def add_review_rating(request):
+   
     authorization_header = request.headers.get('Authorization')
     
     if not authorization_header:
@@ -578,16 +592,24 @@ def add_review_rating(request):
     
     try:
         user_id = decode_token(authorization_header)
-        created_by = request.data.get('createdBy')
-        if created_by != user_id:
-            return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
+        user = User.objects.get(id=user_id)
+        if not user_id:
+            return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Validation and saving
         serializer = ReviewRatingSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(createdBy=user_id)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer.save(createdBy=user_id)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    except ValidationError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print(e)  # Log the exception for debugging
+        return Response({'error': 'Internal Server Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @api_view(['GET'])
 def get_review_ratings(request):
@@ -683,3 +705,28 @@ def get_profile_image(request, user_id):
     
     except User.DoesNotExist:
         return NotFound("User not found")
+
+@api_view(['GET'])
+def get_top_chefs(request):
+    """
+    Fetches all the chefs with user details.
+
+    Returns:
+        Response: Serialized data of all chefs with user details.
+    """
+    top_chefs = FreelanceChef.objects.all()
+    serialized_data = []
+    for chef in top_chefs:
+        chef_data = TopFreelanceChefSerializer(chef).data
+        user_data = {
+            'id': chef.user.id,
+            'firstName': chef.user.first_name,
+            'lastName': chef.user.last_name,
+            'profile_image': chef.user.profile_image.url if chef.user.profile_image else None,
+            'username': chef.user.username,
+            'email': chef.user.email,
+            # Add more user fields as needed
+        }
+        chef_data['user'] = user_data
+        serialized_data.append(chef_data)
+    return Response(serialized_data, status=status.HTTP_200_OK)
